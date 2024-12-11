@@ -14,7 +14,8 @@ class WineQualityPredictor:
         return X_advanced
 
 def predict_quality(input_features):
-    model = joblib.load('white_wine_quality_model.pkl')  # Kaydedilen modeli yükleme
+    model = joblib.load('classification_red_model.pkl')
+    print("Model successfully loaded.")
     predictor = WineQualityPredictor()
     feature_columns = [
         'fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar', 
@@ -27,9 +28,8 @@ def predict_quality(input_features):
     return prediction[0]
 
 if __name__ == "__main__":
-    # Kullanıcıdan giriş verileri liste olarak alınır
     input_list = [
-8.6,0.55,0.35,15.55,0.057,35.5,366.5,1.0001,3.04,0.63,11.0
+6.9,1.09,0.06,2.1,0.061,12.0,31.0,0.9948,3.51,0.43,11.4
 ]
     category = predict_quality(input_list)
-    print("Tahmin Edilen Kalite Kategorisi:", category)
+    print("Estimated Quality Category:", category)

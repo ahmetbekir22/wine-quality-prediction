@@ -5,8 +5,12 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectFromModel
-from sklearn.metrics import accuracy_score, classification_report
-import joblib  # Model kaydetme/yükleme için
+from sklearn.metrics import accuracy_score
+import joblib
+from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
 class WineQualityPredictor:
     def __init__(self, data_path):
@@ -14,7 +18,7 @@ class WineQualityPredictor:
         self.label_encoder = LabelEncoder()
         self.data['quality_category'] = pd.cut(
             self.data['quality'], 
-            bins=[0, 4, 6, 10],  
+            bins=[0, 5, 6, 10],  
             labels=["Low Quality", "Medium Quality", "High Quality"]
         )
         self.X = self.data.drop(['quality', 'quality_category'], axis=1)
@@ -35,6 +39,11 @@ class WineQualityPredictor:
         X_train, X_test, y_train, y_test = train_test_split(
             X_advanced, self.y_cls, test_size=0.2, random_state=42
         )
+
+        test_data = X_test[self.X.columns].copy()
+        test_data['quality_category'] = y_test
+        test_data.to_csv('test_data_white_classification.csv', index=False)
+
         pipeline = Pipeline([
             ('scaler', StandardScaler()),
             ('feature_selection', SelectFromModel(RandomForestClassifier(n_estimators=100))),
@@ -52,13 +61,37 @@ class WineQualityPredictor:
         grid_search.fit(X_train, y_train)
         best_model = grid_search.best_estimator_
         y_pred = best_model.predict(X_test)
-        print("En İyi Parametreler:", grid_search.best_params_)
-        print("\nSınıflandırma Raporu:")
-        print(classification_report(y_test, y_pred))
-        print("\nAccuracy:", accuracy_score(y_test, y_pred))
-        joblib.dump(best_model, 'white_wine_quality_model.pkl')  # Modeli kaydetme
-        return best_model
 
+        # Numerical encoding of categories for R² and MSE
+        y_test_encoded = self.label_encoder.fit_transform(y_test)
+        y_pred_encoded = self.label_encoder.transform(y_pred)
+        
+        # Calculate metrics
+        mse = mean_squared_error(y_test_encoded, y_pred_encoded)
+        r2 = r2_score(y_test_encoded, y_pred_encoded)
+        
+        print("Best parameters:", grid_search.best_params_)
+        print("\nAccuracy:", accuracy_score(y_test, y_pred))
+        print("MSE (Mean Square Error):", mse)
+        print("R² (Determination Coefficient):", r2)
+        
+        joblib.dump(best_model, 'classification_white_model.pkl')
+
+        
+        # Confusion Matrix creation
+        cm = confusion_matrix(y_test, y_pred, labels=["Low Quality", "Medium Quality", "High Quality"])
+        
+        # Confusion Matrix plot
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", 
+                    xticklabels=["Low Quality", "Medium Quality", "High Quality"],
+                    yticklabels=["Low Quality", "Medium Quality", "High Quality"])
+        plt.title("Confusion Matrix: Actual vs Predicted")
+        plt.xlabel("Predicted Labels")
+        plt.ylabel("Actual Labels")
+        plt.show()
+        return best_model
+    
 if __name__ == "__main__":
-    predictor = WineQualityPredictor('wine_quality_data/winequality-white.csv')  # Dosya yolunu güncelleyin
+    predictor = WineQualityPredictor('wine_quality_data/winequality-white.csv')
     predictor.train_classification_model()
